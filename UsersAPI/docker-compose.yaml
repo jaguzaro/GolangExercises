@@ -1,0 +1,44 @@
+version: '3.3'
+
+services:
+  mssql:
+    container_name: sql
+    image: "mcr.microsoft.com/mssql/server:2022-latest"
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=Admin123
+      - MSSQL_PID=Developer
+      - DB_USER=SA
+    ports:
+      - 1433:1433
+    volumes:
+      - ./data:/var/opt/mssql/data
+    networks:
+      - go-network
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P Admin123 -Q "SELECT 1" -b -o /dev/null|| exit 1
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+  go-service:
+    container_name: go-service
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: go-service
+    ports:
+      - 8080:8080
+    depends_on:
+      mssql:
+        condition: service_healthy
+    networks:
+      - go-network
+
+volumes:
+  dbdata:
+
+networks:
+  go-network:
+    driver: bridge
+    
